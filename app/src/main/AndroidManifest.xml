@@ -20,10 +20,16 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:process="system"
-            android:enabled="true"
-            android:name=".KeepScreenOnService"/>
+        <service android:name=".TileSrv"
+            android:label="@string/tileServiceString"
+            android:icon="@drawable/ic_launcher_background"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
+
+        <service android:name=".KeepScreenOnService"/>
     </application>
 
 </manifest>
