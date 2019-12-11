@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">ScreenOn</string>
+    <string name="tipsString">保持螢幕開啟</string>
 </resources>
