@@ -6,58 +6,64 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
+import android.util.Log;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.os.Bundle;
 import android.content.SharedPreferences;
 
+
 public class MainActivity extends AppCompatActivity {
     SharedPreferences mSharedPreferences = null;
+    uiReceiver uireceiver = new uiReceiver();
     Intent intent = new Intent();
-    private  myReceiver receiver;
-
+    boolean updateUi = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-        Switch sw1 = findViewById(R.id.switch1);
-        if (getSetting() == 1) {
-            sw1.setChecked(true);
-        }
-
         intent.setClass(this, KeepScreenOnService.class);
 
+        Switch sw1 = findViewById(R.id.switch1);
+        sw1.setChecked(getSetting());
         sw1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (updateUi) return;
 
                 if (isChecked) {
-                    setSetting(1);
-                    startService(intent);
+                    Log.d("MainActivity", "onClick On");
+                    setSetting(true);
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent);
+                    } else {
+                        startService(intent);
+                    }
                 } else {
-                    setSetting(0);
-                    startService(intent);
+                    Log.d("MainActivity", "onClick Off");
+                    setSetting(false);
+
+                    stopService(intent);
                 }
             }
         });
 
-        receiver = new myReceiver();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("com.sobored.screenOn.intent");
-        registerReceiver(receiver, filter);
+        registerReceiver(uireceiver, new IntentFilter("com.sobored.screenOn.intent")); //註冊更新UI服務
     }
 
-    private int getSetting() {
+    private boolean getSetting() {
         if (mSharedPreferences == null) mSharedPreferences = getSharedPreferences("profile", Context.MODE_PRIVATE);
-        return mSharedPreferences.getInt("Screen", 0);
+        return mSharedPreferences.getBoolean("Screen", false);
     }
 
-    private void setSetting(int sw) {
-        if (mSharedPreferences == null) mSharedPreferences = getSharedPreferences("profile", Context.MODE_PRIVATE);
-        mSharedPreferences.edit()
-                .putInt("Screen", sw)
+    private void setSetting(boolean sw) {
+        if (mSharedPreferences == null)
+            mSharedPreferences = getSharedPreferences("profile", Context.MODE_PRIVATE);
+            mSharedPreferences.edit()
+                .putBoolean("Screen", sw)
                 .apply();
     }
 
@@ -65,23 +71,24 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        unregisterReceiver(receiver);
-        setSetting(0);
+        unregisterReceiver(uireceiver); //卸載更新UI服務
     }
 
-    public class myReceiver extends BroadcastReceiver {
 
+    public class uiReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
             Bundle bundle = intent.getExtras();
             int getSetting = bundle.getInt("setting");
 
+            updateUi = true;
             Switch sw1 = findViewById(R.id.switch1);
             if (getSetting == 1) {
                 sw1.setChecked(true);
             } else {
                 sw1.setChecked(false);
             }
+            updateUi = false;
         }
     }
 }

@@ -3,6 +3,7 @@ package com.sobored.ScreenOn;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.util.Log;
@@ -13,14 +14,16 @@ public class TileSrv extends TileService {
 
     @Override
     public void onCreate() {
+        Log.d("TileSrv", "onCreate");
         super.onCreate();
 
         intent.setClass(this, KeepScreenOnService.class);
-        Log.d("TileSrv", "onCreate");
     }
 
     @Override
     public void onClick() {
+        Log.d("TileSrv", "onClick");
+
         super.onClick();
         Intent broadcastIntent = new  Intent("com.sobored.screenOn.intent");
 
@@ -28,32 +31,31 @@ public class TileSrv extends TileService {
             //啟動
             getQsTile().setState(Tile.STATE_ACTIVE);
             getQsTile().updateTile();
-            setSetting(1);
-            startService(intent);
             broadcastIntent.putExtra("setting", 1);
+            setSetting(true);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent);
+            } else {
+                startService(intent);
+            }
         } else {
             //關閉
             getQsTile().setState(Tile.STATE_INACTIVE);
             getQsTile().updateTile();
-            setSetting(0);
-            startService(intent);
             broadcastIntent.putExtra("setting", 0);
+            setSetting(false);
+
+            stopService(intent);
         }
-
         sendBroadcast(broadcastIntent);
-        Log.d("TileSrv", "onClick");
-    }
-
-    @Override
-    public void onStopListening() {
-        super.onStopListening();
-
-        Log.d("TileSrv", "onStopListening");
     }
 
     @Override
     public void onStartListening() {
-        if (getSetting() == 1) {
+        Log.d("TileSrv", "onStartListening");
+
+        if (getSetting() == true) {
             getQsTile().setState(Tile.STATE_ACTIVE);
             getQsTile().updateTile();
         } else {
@@ -61,26 +63,18 @@ public class TileSrv extends TileService {
             getQsTile().updateTile();
         }
         super.onStartListening();
-
-        Log.d("TileSrv", "onStopListening");
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("TileSrv", "onStartCommand");
-
-        return super.onStartCommand(intent, flags, startId);
-    }
-
-    private int getSetting() {
-        if (mSharedPreferences == null) mSharedPreferences = getSharedPreferences("profile", Context.MODE_PRIVATE);
-        return mSharedPreferences.getInt("Screen", 0);
-    }
-
-    private void setSetting(int sw) {
-        if (mSharedPreferences == null) mSharedPreferences = getSharedPreferences("profile", Context.MODE_PRIVATE);
-        mSharedPreferences.edit()
-                .putInt("Screen", sw)
+    private void setSetting(boolean sw) {
+        if (mSharedPreferences == null)
+            mSharedPreferences = getSharedPreferences("profile", Context.MODE_PRIVATE);
+            mSharedPreferences.edit()
+                .putBoolean("Screen", sw)
                 .apply();
+    }
+
+    private boolean getSetting() {
+        if (mSharedPreferences == null) mSharedPreferences = getSharedPreferences("profile", Context.MODE_PRIVATE);
+        return mSharedPreferences.getBoolean("Screen", false);
     }
 }
